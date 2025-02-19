@@ -1,0 +1,54 @@
+[package]
+name = "neorg-syntax"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
+description = "A markdown laguage"
+homepage = "https://github.com/abhinandh-s/neorg-syntax"
+documentation = "https://github.com/abhinandh-s/neorg-syntax"
+categories = ["command-line-utilities"]
+keywords = ["cli", "tool", "utility"]
+
+[dependencies]
+anyhow = "1.0.95"
+ecow = "0.2.3"
+once_cell = "1.20.3"
+ropey = "1.6.1"
+thiserror = "2.0.11"
+unicode-segmentation = "1.12.0"
+# serde = { version = "1.0.217", features = ["derive"] }
+# derive_more = { version = "2.0.1", default-features = false, features = ["from"] }
+# itertools = "0.14.0"
+tower-lsp = "0.20.0"
+# serde_json = "1.0.134"
+# serde_yml = "0.0.12"
+
+[dev-dependencies]
+insta = "1.42.1"
+
+[profile.release]
+panic = 'abort'
+codegen-units = 1
+opt-level = 'z'
+lto = true
+debug = "none"
+strip = "symbols"
+debug-assertions = false
+overflow-checks = false
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+unused_labels = "allow"
+unreachable_pub = "deny"
+
+[workspace.lints.clippy]
+perf = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+or_then_unwrap = "deny"
+panicking_unwrap = "deny"
+get_unwrap = "deny"
+enum_glob_use = "deny"
+redundant_closure = "deny"
+str_to_string = "deny"
