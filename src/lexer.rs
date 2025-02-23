@@ -8,8 +8,8 @@ use crate::NeoChar as _;
 
 pub struct Lexer {
     source: Rope,
-    start: usize,   // start index (byte offset) of current lexeme
-    current: usize, // current index (byte offset)
+    start: usize,   // start index (char offset) of current lexeme
+    current: usize, // current index (char offset)
 }
 
 impl Lexer {
@@ -22,7 +22,7 @@ impl Lexer {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >= self.source.len_bytes()
+        self.current >= self.source.len_chars()
     }
 
     // peek at the current charecter without consuming it.
