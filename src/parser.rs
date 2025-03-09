@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::ParseTools;
+use std::fmt::Display;
+use std::num::NonZeroI8;
+
+use crate::{kind, ParseTools};
 use crate::kind::SyntaxKind;
 use crate::lexer::{Lexer, Token};
 use crate::span::Span;
@@ -9,6 +12,12 @@ use ecow::EcoString;
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Delimiter {
+    Opened,
+    Closed,
 }
 
 impl Parser {
@@ -21,18 +30,91 @@ impl Parser {
     pub fn parse(&mut self) -> Vec<Node> {
         let mut nodes = Vec::new();
         while !self.is_at_end() {
-            if self.peek().kind == SyntaxKind::Astrisk {
-                if self.is_at_line_start() {
+            match self.peek().kind {
+                SyntaxKind::Astrisk => {
                     // not always the case, make it first non white space
                     // char == `*` then heading
                     nodes.push(self.heading());
-                } else {
-                    nodes.push(self.bold());
                 }
+                SyntaxKind::Slash => nodes.push(self.parse_italics()),
+                _ => (), /* {
+                             nodes.push(Node {
+                                 text: "dsd".into(),
+                                 kind: SyntaxKind::Text,
+                                 span: Span::default(),
+                                 attr: None,
+                                 children: None,
+                             });
+                         } */
             }
             self.current += 1;
         }
         nodes
+    }
+    fn parse_italics(&mut self) -> Node {
+        let mut delimiter = Delimiter::Closed;
+        let mut string = EcoString::new();
+        let start = self.peek().span.start;
+        let mut end = self.peek().span.end;
+        let _cond = matches!(
+            self.peek().kind,
+            SyntaxKind::ListItem | SyntaxKind::At | SyntaxKind::NewLine | SyntaxKind::Tilda
+        );
+
+        while !self.is_at_end() && self.peek().kind != SyntaxKind::NewLine
+        /* && self.peek().kind != SyntaxKind::Slash */
+        {
+            match self.peek().kind {
+                SyntaxKind::WhiteSpace => {
+                    if delimiter == Delimiter::Opened {
+                        string.push_str(&self.peek().text);
+                    }
+                    end = self.peek().span.end
+                }
+                SyntaxKind::Text => {
+                    string.push_str(&self.peek().text);
+                    end = self.peek().span.end
+                }
+                SyntaxKind::Slash => {
+                    //  string.push_str(&self.peek().text);
+                    if delimiter == Delimiter::Opened {
+                        delimiter = Delimiter::Closed
+                    } else {
+                        delimiter = Delimiter::Opened
+                    }
+                    end = self.peek().span.end
+                }
+
+                _ => {
+                    string.push_str(&self.peek().text);
+                    println!("Error: unknown kind `{}`", self.peek().kind);
+                    return Node {
+                        text: string,
+                        span: Span { start, end },
+                        attr: None,
+                        children: None,
+                        kind: SyntaxKind::Error,
+                    };
+                }
+            }
+            self.current += 1;
+        }
+        match delimiter {
+            Delimiter::Closed => Node {
+                text: string,
+                span: Span { start, end },
+                attr: None,
+                children: None,
+                kind: SyntaxKind::Italics,
+            },
+            Delimiter::Opened => Node {
+                text: string,
+                span: Span { start, end },
+                attr: None,
+                children: None,
+                kind: SyntaxKind::Error,
+            },
+        }
     }
 
     fn heading(&mut self) -> Node {
@@ -89,20 +171,6 @@ impl Parser {
     }
 
     fn eat_until(&mut self) {}
-
-    fn bold(&mut self) -> Node {
-        let mut string = EcoString::new();
-        let start = self.peek().span.start;
-        let mut end = self.peek().span.end;
-
-        Node {
-            text: string,
-            kind: SyntaxKind::Bold,
-            span: Span::new(start, end),
-            attr: None,
-            children: None,
-        }
-    }
 }
 
 impl ParseTools for Parser {
@@ -136,6 +204,12 @@ pub struct Node {
     pub span: Span,
     pub attr: Option<Attr>,
     pub children: Option<Vec<Node>>,
+}
+
+impl Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+       write!(f, "{} \"{}\" {}", self.kind, self.text, self.span) 
+    }
 }
 
 impl Node {
