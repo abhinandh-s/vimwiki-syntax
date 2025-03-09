@@ -2,9 +2,9 @@ use std::fmt::Display;
 
 use ropey::Rope;
 
+use crate::NeoChar as _;
 use crate::kind::SyntaxKind;
 use crate::span::Span;
-use crate::NeoChar as _;
 
 pub struct Lexer {
     source: Rope,

@@ -19,17 +19,22 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Vec<Node> {
-        let mut expr = Vec::new();
+        let mut nodes = Vec::new();
         while !self.is_at_end() {
             if self.peek().kind == SyntaxKind::Astrisk {
-                let v = self.heading();
-                println!("{:?}", v);
-                expr.push(v);
+                if self.is_at_line_start() {
+                    // not always the case, make it first non white space
+                    // char == `*` then heading
+                    nodes.push(self.heading());
+                } else {
+                    nodes.push(self.bold());
+                }
             }
             self.current += 1;
         }
-        expr
+        nodes
     }
+
     fn heading(&mut self) -> Node {
         let mut level = 0;
         let mut string = EcoString::new();
@@ -56,7 +61,7 @@ impl Parser {
                     return Node {
                         text: string,
                         span: Span { start, end },
-                        attr: Attr::HeadingAttr(level),
+                        attr: Some(Attr::HeadingAttr(level)),
                         children: None,
                         kind: SyntaxKind::Error,
                     };
@@ -67,9 +72,35 @@ impl Parser {
         Node {
             text: string,
             span: Span { start, end },
-            attr: Attr::HeadingAttr(level),
+            attr: Some(Attr::HeadingAttr(level)),
             children: None,
             kind: SyntaxKind::Heading,
+        }
+    }
+
+    fn is_at_line_start(&self) -> bool {
+        if self.current == 0 {
+            return true;
+        }
+
+        // Look at previous token
+        let prev_idx = self.current - 1;
+        matches!(self.tokens[prev_idx].kind, SyntaxKind::NewLine)
+    }
+
+    fn eat_until(&mut self) {}
+
+    fn bold(&mut self) -> Node {
+        let mut string = EcoString::new();
+        let start = self.peek().span.start;
+        let mut end = self.peek().span.end;
+
+        Node {
+            text: string,
+            kind: SyntaxKind::Bold,
+            span: Span::new(start, end),
+            attr: None,
+            children: None,
         }
     }
 }
@@ -103,7 +134,7 @@ pub struct Node {
     pub text: EcoString,
     pub kind: SyntaxKind,
     pub span: Span,
-    pub attr: Attr,
+    pub attr: Option<Attr>,
     pub children: Option<Vec<Node>>,
 }
 
@@ -111,7 +142,7 @@ impl Node {
     pub fn new(
         text: EcoString,
         span: Span,
-        attr: Attr,
+        attr: Option<Attr>,
         children: Option<Vec<Node>>,
         kind: SyntaxKind,
     ) -> Self {
@@ -153,5 +184,38 @@ mod test {
         let one = vec[0].span;
         assert_eq!(one, Span::new(0, 14));
         assert_eq!(vec[0].text, input[0..14])
+    }
+
+    #[test]
+    fn test_bold_text() {
+        let input = "This is *bold* text";
+        let parsed = Parser::new(input).parse();
+
+        assert_eq!(parsed.len(), 1); // One paragraph node
+
+        if let Some(children) = &parsed[0].children {
+            assert_eq!(children.len(), 3); // "This is ", bold node, " text"
+
+            // Check the bold node
+            assert_eq!(children[1].kind, SyntaxKind::Bold);
+            assert_eq!(children[1].text, "bold");
+        } else {
+            panic!("Expected paragraph to have children");
+        }
+    }
+
+    #[test]
+    fn test_heading_vs_bold() {
+        let input = "* Heading\nThis is *bold* text";
+        let parsed = Parser::new(input).parse();
+
+        assert_eq!(parsed.len(), 2); // Heading and paragraph
+        assert_eq!(parsed[0].kind, SyntaxKind::Heading);
+        assert_eq!(parsed[1].kind, SyntaxKind::Paragraph);
+
+        if let Some(children) = &parsed[1].children {
+            assert_eq!(children[1].kind, SyntaxKind::Bold);
+            assert_eq!(children[1].text, "bold");
+        }
     }
 }

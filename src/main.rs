@@ -2,7 +2,7 @@ use neorg_syntax::kind::SyntaxKind;
 use neorg_syntax::parser::Parser;
 
 fn main() {
-    let input = "* Main Heading\nSome _italic_ text\n- List item\n@ metadata** Main / Heading\n";
+    let input = "* Main Heading\n Some *bold content* Some _italic_ text\n- List item\n@ metadata** Main / Heading\n";
     // let lexed = Lexer::new(input.into()).lex();
     // for l in lexed {
     //     println!("{}", l);
@@ -11,8 +11,7 @@ fn main() {
     println!("{:#?}", parsed);
     for i in parsed {
         if i.kind == SyntaxKind::Heading {
-            println!("i is heading")
+            //     println!("i is heading")
         }
     }
 }
-

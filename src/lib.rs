@@ -1,14 +1,11 @@
 use self::lexer::Token;
 
-pub mod ast;
-pub mod parser;
-pub mod lexer;
-pub mod node;
-pub mod span;
 pub mod kind;
+pub mod lexer;
+pub mod parser;
+pub mod span;
 
 pub(crate) mod error;
-
 
 pub trait NeoChar {
     /// returns true if the char matches with any syntax char of neorg
