@@ -39,6 +39,11 @@ pub enum SyntaxKind {
     Italic,
     Bold,
     Strikethrough,
+    UnderLined,
+}
+
+impl SyntaxKind {
+    pub fn is_special() {}
 }
 
 impl Display for SyntaxKind {
@@ -69,6 +74,7 @@ impl Display for SyntaxKind {
                 SyntaxKind::Italic => "TODO",
                 SyntaxKind::Bold => "TODO",
                 SyntaxKind::Strikethrough => "TODO",
+                SyntaxKind::UnderLined => "UNDERLINED",
             }
         )
     }
