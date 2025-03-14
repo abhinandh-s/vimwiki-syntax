@@ -31,15 +31,14 @@ pub enum SyntaxKind {
     Root,
     /// `/` Italics
     Italics,
-    Document,
     Heading,
     ListItem,
-    Attribute,
-    Paragraph,
-    Italic,
     Bold,
     Strikethrough,
     UnderLined,
+    IndentWhiteSpace,
+    BoldMarker,
+    HeadingMarker,
 }
 
 impl SyntaxKind {
@@ -66,15 +65,14 @@ impl Display for SyntaxKind {
                 SyntaxKind::Error => "ERROR",
                 SyntaxKind::Root => "ROOT",
                 SyntaxKind::Italics => "ITALIC",
-                SyntaxKind::Document => "TODO",
-                SyntaxKind::Heading => "TODO",
-                SyntaxKind::ListItem => "TODO",
-                SyntaxKind::Attribute => "TODO",
-                SyntaxKind::Paragraph => "TODO",
-                SyntaxKind::Italic => "TODO",
-                SyntaxKind::Bold => "TODO",
-                SyntaxKind::Strikethrough => "TODO",
+                SyntaxKind::Heading => "HEADING",
+                SyntaxKind::ListItem => "LISTITEM",
+                SyntaxKind::Bold => "BOLD",
+                SyntaxKind::Strikethrough => "STRIKETHROUGH",
                 SyntaxKind::UnderLined => "UNDERLINED",
+                SyntaxKind::IndentWhiteSpace => "INDENTWHITESPACE",
+                SyntaxKind::BoldMarker => "BOLDMARKER",
+                SyntaxKind::HeadingMarker => "HEADINGMARKER",
             }
         )
     }

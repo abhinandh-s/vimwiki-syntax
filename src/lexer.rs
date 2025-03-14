@@ -1,15 +1,27 @@
-use std::fmt::Display;
-
 use ropey::Rope;
 
 use crate::NeoChar as _;
 use crate::kind::SyntaxKind;
 use crate::span::Span;
 
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub struct Token {
+    pub kind: SyntaxKind,
+    pub text: String,
+    pub span: Span,
+}
+
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {:?} {}", self.kind, self.text, self.span)
+    }
+}
+
 pub struct Lexer {
     source: Rope,
     start: usize,   // start index (char offset) of current lexeme
     current: usize, // current index (char offset)
+    tokens: Vec<Token>,
 }
 
 impl Lexer {
@@ -18,6 +30,7 @@ impl Lexer {
             source,
             start: 0,
             current: 0,
+            tokens: Vec::new(),
         }
     }
 
@@ -69,15 +82,14 @@ impl Lexer {
     }
 
     pub fn lex(&mut self) -> Vec<Token> {
-        let mut tokens = Vec::new();
         loop {
             let token = self.scan();
-            tokens.push(token.clone());
+            self.tokens.push(token.clone());
             if token.kind == SyntaxKind::Eof {
                 break;
             }
         }
-        tokens
+        self.tokens.clone()
     }
 
     pub fn scan(&mut self) -> Token {
@@ -88,7 +100,15 @@ impl Lexer {
 
         self.advance()
             .map(|i| match i {
-                '*' => self.make_token(SyntaxKind::Astrisk),
+                '*' => {
+                    self.make_token(SyntaxKind::Astrisk)
+                    // let is_heading = false;
+                    // if is_heading {
+                    //     self.make_token(SyntaxKind::HeadingMarker)
+                    // } else {
+                    //     self.make_token(SyntaxKind::BoldMarker)
+                    // }
+                }
                 '@' => self.make_token(SyntaxKind::At),
                 '-' => self.make_token(SyntaxKind::Hyphen),
                 '~' => self.make_token(SyntaxKind::Tilda),
@@ -96,6 +116,11 @@ impl Lexer {
                 '_' => self.make_token(SyntaxKind::Underscore),
                 '\n' => self.make_token(SyntaxKind::NewLine),
                 ' ' | '\t' => {
+                    let prev_token = self
+                        .tokens
+                        .last()
+                        .map(|t| t.kind == SyntaxKind::NewLine)
+                        .unwrap_or(false);
                     // Consume contiguous spaces and tabs.
                     while let Some(ch) = self.peek() {
                         if ch == ' ' || ch == '\t' {
@@ -104,7 +129,12 @@ impl Lexer {
                             break;
                         }
                     }
-                    self.make_token(SyntaxKind::WhiteSpace)
+
+                    if prev_token || self.tokens.is_empty() {
+                        self.make_token(SyntaxKind::IndentWhiteSpace)
+                    } else {
+                        self.make_token(SyntaxKind::WhiteSpace)
+                    }
                 }
                 _ => {
                     while let Some(char) = self.peek() {
@@ -117,18 +147,5 @@ impl Lexer {
                 }
             })
             .unwrap()
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct Token {
-    pub kind: SyntaxKind,
-    pub text: String,
-    pub span: Span,
-}
-
-impl Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {:?} {}", self.kind, self.text, self.span)
     }
 }
