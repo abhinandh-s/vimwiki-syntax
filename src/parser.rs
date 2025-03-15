@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::ops::Deref;
 
 use ecow::EcoString;
 
@@ -16,6 +17,37 @@ pub struct Parser {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Node(Repr);
+
+impl Node {
+    pub fn kind(&self) -> &str {
+        match self {
+            Self(Repr::SyntaxNode(_)) => "SyntaxNode",
+            Self(Repr::ErrorNode(_)) => "ErrorNode",
+        }
+    }
+      pub fn text(&self) -> String {
+        match self {
+            Self(Repr::SyntaxNode(text)) => text.text.to_string(),
+            Self(Repr::ErrorNode(err)) => err.text.to_string(),
+        }
+    }
+  pub fn errors(&self) -> Option<String> {
+        match self {
+            Self(Repr::SyntaxNode(_)) => None,
+            Self(Repr::ErrorNode(err)) => err.error.clone(),
+        }
+    }
+
+}
+
+impl Repr {
+       pub fn kind(&self) -> &str {
+        match self {
+            Self::SyntaxNode(_) => "SyntaxNode",
+            Self::ErrorNode(_) => "ErrorNode",
+        }
+    }
+}
 
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
