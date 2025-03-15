@@ -14,7 +14,7 @@ pub trait NeoChar {
 
 impl NeoChar for char {
     fn is_special_char(&self) -> bool {
-        matches!(self, '*' | '/' | '_' | '\n' | '\t')
+        matches!(self, '*' | '/' | '_' | '\n' | '\t' | '~' | '-')
     }
 }
 
