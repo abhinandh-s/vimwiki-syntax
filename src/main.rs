@@ -6,7 +6,7 @@ use self::lexer::Token;
 use self::parser::Parser;
 
 fn main() {
-    let input = " /italic/ \n  /italc _under lined text_ \n next line \n* ** _this o _ _ ~ this is in tilda ~ -this is in hypens - -";
+    let input = " / italic/ \n  /italc _ under lined text_ \n next line \n* ** _this o _ _ ~ this is in tilda ~ - this is in hypens - -";
     // let lexed = lexer::Lexer::new(input.into()).lex();
     let lexed = lexer::Lexer::new(input.into()).lex();
     let binding = parser::Parser::new(lexed.clone());

@@ -159,11 +159,17 @@ impl Parser {
         match self.advance() {
             Some(i) => {
                 let start = i.span.start;
-                let mut parse_expr = |pat: SyntaxKind,
+                let mut parse_inline_expr = |pat: SyntaxKind,
                                       kind: SyntaxKind,
                                       mut text: EcoString,
                                       error: Option<String>,
                                       hint: Option<String>| {
+                    if let Some(next_token) = self.peek() {
+                        if next_token.kind == SyntaxKind::WhiteSpace {
+                            text.push_str(&next_token.text);
+                            self.advance();
+                        }
+                    }
                     if let Some(next_token) = self.peek() {
                         if next_token.kind == SyntaxKind::Text {
                             text.push_str(&next_token.text);
@@ -191,28 +197,28 @@ impl Parser {
                     })
                 };
                 match i.kind {
-                    SyntaxKind::Slash => parse_expr(
+                    SyntaxKind::Slash => parse_inline_expr(
                         SyntaxKind::Slash,
                         SyntaxKind::Italics,
                         text,
                         Some("Incomplete italic text".to_string()),
                         Some("Text must be wrapped in slash pairs like /text/".to_string()),
                     ),
-                    SyntaxKind::Underscore => parse_expr(
+                    SyntaxKind::Underscore => parse_inline_expr(
                         SyntaxKind::Underscore,
                         SyntaxKind::UnderLined,
                         text,
                         Some("Incomplete underlined text".to_string()),
                         Some("Text must be wrapped in underscore pairs like _text_".to_string()),
                     ),
-                    SyntaxKind::Tilda => parse_expr(
+                    SyntaxKind::Tilda => parse_inline_expr(
                         SyntaxKind::Tilda,
                         SyntaxKind::ListItem,
                         text,
                         Some("Incomplete list text".to_string()),
                         Some("Text must be wrapped in tilda pairs like ~text~".to_string()),
                     ),
-                    SyntaxKind::Hyphen => parse_expr(
+                    SyntaxKind::Hyphen => parse_inline_expr(
                         SyntaxKind::Hyphen,
                         SyntaxKind::Strikethrough,
                         text,
