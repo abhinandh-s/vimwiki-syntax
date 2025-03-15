@@ -159,43 +159,44 @@ impl Parser {
         match self.advance() {
             Some(i) => {
                 let start = i.span.start;
-                let mut parse_inline_expr = |pat: SyntaxKind,
-                                      kind: SyntaxKind,
-                                      mut text: EcoString,
-                                      error: Option<String>,
-                                      hint: Option<String>| {
-                    if let Some(next_token) = self.peek() {
-                        if next_token.kind == SyntaxKind::WhiteSpace {
-                            text.push_str(&next_token.text);
-                            self.advance();
+                let mut parse_inline_expr =
+                    |pat: SyntaxKind,
+                     kind: SyntaxKind,
+                     mut text: EcoString,
+                     error: Option<String>,
+                     hint: Option<String>| {
+                        if let Some(next_token) = self.peek() {
+                            if next_token.kind == SyntaxKind::WhiteSpace {
+                                text.push_str(&next_token.text);
+                                self.advance();
+                            }
                         }
-                    }
-                    if let Some(next_token) = self.peek() {
-                        if next_token.kind == SyntaxKind::Text {
-                            text.push_str(&next_token.text);
-                            self.advance();
+                        if let Some(next_token) = self.peek() {
+                            if next_token.kind == SyntaxKind::Text {
+                                text.push_str(&next_token.text);
+                                self.advance();
 
-                            if let Some(closing_token) = self.peek() {
-                                if closing_token.kind == pat {
-                                    self.advance();
-                                    return Repr::SyntaxNode(SyntaxNode::new(
-                                        kind,
-                                        text.clone(),
-                                        Span::new(start, closing_token.span.end),
-                                    ));
+                                if let Some(closing_token) = self.peek() {
+                                    if closing_token.kind == pat {
+                                        self.advance();
+                                        return Repr::SyntaxNode(SyntaxNode::new(
+                                            kind,
+                                            text.clone(),
+                                            Span::new(start, closing_token.span.end),
+                                        ));
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Repr::ErrorNode(ErrorNode {
-                        kind: SyntaxKind::Error,
-                        text,
-                        error,
-                        hint,
-                        span: i.span,
-                    })
-                };
+                        Repr::ErrorNode(ErrorNode {
+                            kind: SyntaxKind::Error,
+                            text,
+                            error,
+                            hint,
+                            span: i.span,
+                        })
+                    };
                 match i.kind {
                     SyntaxKind::Slash => parse_inline_expr(
                         SyntaxKind::Slash,
