@@ -1,27 +1,17 @@
 #![allow(unused)]
 
-use neorg_syntax::*;
-
 use self::kind::SyntaxKind;
 use self::lexer::Token;
+use self::parser::Bold;
 use self::parser::{Parser, Repr};
+use neorg_syntax::*;
 
 fn main() {
-    // let input = " / italic/ \n  /italc _ under lined text_ \n next line \n* ** _this o _ _ ~ this is in tilda ~ - this is in hypens - -";
-    let input = include_str!("../examples/tests/underline.norg");
+    // let input = " /italic/ \n  /italc _under lined text_ \n next line \n* ** _this o_ _ ~this is in tilda~ -this is in hypens- -";
+    let input = include_str!("../examples/tests/italics.norg");
     let lexed = lexer::Lexer::new(input.into()).lex();
     let mut binding = parser::Parser::new(lexed.clone());
-    binding.parse().iter().for_each(|i| {
-        if i.kind() == SyntaxKind::UnderLined {
-            println!("{}", i.span());
-        }
-        // if i.kind() == "ErrorNode" {
-        //     println!("{}", i.errors().unwrap());
-        // }
-    })
-    // print_parsed(binding);
-    // println!("\n\n\n");
-    // print_lexed(lexed);
+    crate::ast::print_ast(input);
 }
 
 fn print_lexed(l: Vec<Token>) {

@@ -1,5 +1,6 @@
 use self::lexer::Token;
 
+pub mod ast;
 pub mod kind;
 pub mod lexer;
 pub mod parser;

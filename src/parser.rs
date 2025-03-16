@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use anyhow::anyhow;
 use ecow::EcoString;
 
 use crate::kind::SyntaxKind;
@@ -16,32 +15,10 @@ pub struct Parser {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Expr {
-    Text(SyntaxNode),
-    Italics(SyntaxNode),
-    Error(SyntaxNode),
-    Bold(SyntaxNode),
-    UnderLined(SyntaxNode),
-    Strikethrough(SyntaxNode),
-    ListItem(SyntaxNode),
-    Indent(SyntaxNode),
-    NewLine,
-}
-impl Expr {
-    pub fn from_untyped(node: &SyntaxNode) -> Expr {
-        match node.kind {
-            SyntaxKind::Italics => Expr::Italics(node.clone()),
-            SyntaxKind::Error => Expr::Error(node.clone()),
-            SyntaxKind::Strikethrough => Expr::Strikethrough(node.clone()),
-            SyntaxKind::UnderLined => Expr::UnderLined(node.clone()),
-            SyntaxKind::Text => Expr::Text(node.clone()),
-            _ => Self::Error(node.clone()),
-        }
-    }
-}
+pub struct Node(Repr);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Node(Repr);
+pub struct Bold(pub SyntaxNode);
 
 impl Node {
     pub fn type_is(&self) -> &str {
@@ -79,7 +56,13 @@ impl Node {
 }
 
 impl Repr {
-    pub fn kind(&self) -> &str {
+    pub fn kind(&self) -> &SyntaxKind {
+        match self {
+            Self::SyntaxNode(syn) => &syn.kind,
+            Self::ErrorNode(err) => &err.kind,
+        }
+    }
+    pub fn type_is(&self) -> &str {
         match self {
             Self::SyntaxNode(_) => "SyntaxNode",
             Self::ErrorNode(_) => "ErrorNode",
@@ -129,7 +112,7 @@ impl Display for ErrorNode {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ErrorNode {
     kind: SyntaxKind,
-    text: EcoString,
+    pub text: EcoString,
     error: Option<String>,
     hint: Option<String>,
     span: Span,
@@ -156,7 +139,7 @@ impl ErrorNode {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SyntaxNode {
     kind: SyntaxKind,
-    text: EcoString,
+    pub text: EcoString,
     span: Span,
 }
 
@@ -232,24 +215,18 @@ impl Parser {
         match self.advance() {
             Some(i) => {
                 let start = i.span.start;
-                let mut parse_inline_expr =
+                let mut parse_delimeted_expr =
                     |pat: SyntaxKind,
                      kind: SyntaxKind,
                      mut text: EcoString,
                      error: Option<String>,
                      hint: Option<String>| {
-                        // if let Some(next_token) = self.peek() {
-                        //     if next_token.kind == SyntaxKind::WhiteSpace {
-                        //         text.push_str(&next_token.text);
-                        //         self.advance();
-                        //     }
-                        // }
                         if let Some(next_token) = self.peek() {
                             if next_token.kind == SyntaxKind::Text {
                                 text.push_str(&next_token.text);
                                 self.advance();
                                 if next_token.text.ends_with(' ') {
-                                    // println!("GOT WhiteSpace at the end => {}", next_token.text);
+                                    // if the text ends with WhiteSpace its not vaild
                                     if let Some(closing_token) = self.peek() {
                                         if closing_token.kind == pat {
                                             self.advance();
@@ -258,12 +235,11 @@ impl Parser {
                                                 text,
                                                 error: Some("Trailing WhiteSpace".to_owned()),
                                                 hint,
-                                                span: i.span,
+                                                span: Span::new(start, i.span.end),
                                             });
                                         }
                                     }
                                 }
-
                                 if let Some(closing_token) = self.peek() {
                                     if closing_token.kind == pat {
                                         self.advance();
@@ -286,28 +262,28 @@ impl Parser {
                         })
                     };
                 match i.kind {
-                    SyntaxKind::Slash => parse_inline_expr(
+                    SyntaxKind::Slash => parse_delimeted_expr(
                         SyntaxKind::Slash,
                         SyntaxKind::Italics,
                         text,
                         Some("Incomplete italic text".to_string()),
                         Some("Text must be wrapped in slash pairs like /text/".to_string()),
                     ),
-                    SyntaxKind::Underscore => parse_inline_expr(
+                    SyntaxKind::Underscore => parse_delimeted_expr(
                         SyntaxKind::Underscore,
                         SyntaxKind::UnderLined,
                         text,
                         Some("Incomplete underlined text".to_string()),
                         Some("Text must be wrapped in underscore pairs like _text_".to_string()),
                     ),
-                    SyntaxKind::Tilda => parse_inline_expr(
+                    SyntaxKind::Tilda => parse_delimeted_expr(
                         SyntaxKind::Tilda,
                         SyntaxKind::ListItem,
                         text,
                         Some("Incomplete list text".to_string()),
                         Some("Text must be wrapped in tilda pairs like ~text~".to_string()),
                     ),
-                    SyntaxKind::Hyphen => parse_inline_expr(
+                    SyntaxKind::Hyphen => parse_delimeted_expr(
                         SyntaxKind::Hyphen,
                         SyntaxKind::Strikethrough,
                         text,
@@ -338,5 +314,32 @@ impl Iterator for Parser {
             // can we eleminate it
             self.tokens[self.current..].iter().next().cloned()
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    use self::kind::SyntaxKind;
+    use self::span::Span;
+
+    #[test]
+    fn parse_italics() {
+        let mut italics = Vec::new();
+        let mut errors = Vec::new();
+        let source = include_str!("../examples/tests/italics.norg");
+        let lexed = lexer::Lexer::new(source.into()).lex();
+        let mut nodes = parser::Parser::new(lexed.clone());
+        nodes.parse().iter().for_each(|node| {
+            if node.kind() == SyntaxKind::Italics {
+                assert_eq!(node.span(), Span::new(52, 69));
+                italics.push(node.text());
+            } else if node.kind() == SyntaxKind::Error {
+                errors.push(node.text());
+            }
+        });
+        assert_eq!(italics.len(), 1);
+        assert_eq!(errors.len(), 5);
     }
 }
