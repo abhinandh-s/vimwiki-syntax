@@ -1,12 +1,12 @@
 [package]
-name = "neorg-syntax"
+name = "vimwiki-syntax"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
 description = "A markdown laguage"
-homepage = "https://github.com/abhinandh-s/neorg-syntax"
-documentation = "https://github.com/abhinandh-s/neorg-syntax"
+homepage = "https://github.com/abhinandh-s/vimwiki-syntax"
+documentation = "https://github.com/abhinandh-s/vimwiki-syntax"
 categories = ["command-line-utilities"]
 keywords = ["cli", "tool", "utility"]
 
