@@ -3,10 +3,34 @@ use std::fmt::Display;
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 #[repr(u8)]
 pub enum SyntaxKind {
-    /// '*'
-    Star,
+    /// '['
+    LeftSqBrackets,
+    /// ']'
+    RightSqBrackets,
+    /// '('
+    LeftParen,
+    /// ')'
+    RightParen,
+    /// '{'
+    LeftCurlyBraces,
+    /// '}'
+    RightCurlyBraces,
     /// '/'
     Slash,
+    /// '*'
+    Astrisk,
+    /// '~' ordered list
+    Tilda,
+    /// '-' unodered list
+    Hyphen,
+    // `:`
+    SemiColon,
+    // `#`
+    HashTag,
+    // `=`
+    Equal,
+    // `%` for commets
+    Percentage,
     /// spaces and tabs (preserved)
     WhiteSpace,
     /// '\n'
@@ -15,34 +39,31 @@ pub enum SyntaxKind {
     Text,
     /// represents end of file, added by lexer
     Eof,
-    /// '*'
-    Astrisk,
     /// '_'
     Underscore,
-    /// '~' ordered list
-    Tilda,
-    /// '-' unodered list
-    Hyphen,
     /// '@' at symbol
     At,
     /// Error Node
     Error,
     /// root node of the document
     Root,
-    /// `/` Italics
-    Italics,
-    Heading,
-    ListItem,
-    Bold,
-    Strikethrough,
-    UnderLined,
+    /// ` `
     IndentWhiteSpace,
-    BoldMarker,
-    HeadingMarker,
+    /// "`"
+    CodeMarker,
+    /// `^`
+    SuperScriptMarker,
+    /// `,`
+    SubScriptMarker,
 }
 
 impl SyntaxKind {
-    pub fn is_special() {}
+    pub fn is_grouping(&self) -> bool {
+        matches!(self, Self::LeftCurlyBraces)
+    }
+    pub fn is_error(&self) -> bool {
+        matches!(self, Self::Error)
+    }
 }
 
 impl Display for SyntaxKind {
@@ -51,7 +72,6 @@ impl Display for SyntaxKind {
             f,
             "{}",
             match self {
-                SyntaxKind::Star => "STAR",
                 SyntaxKind::Slash => "SLASH",
                 SyntaxKind::WhiteSpace => "WHITESPACE",
                 SyntaxKind::NewLine => "NEWLINE",
@@ -64,15 +84,20 @@ impl Display for SyntaxKind {
                 SyntaxKind::At => "AT",
                 SyntaxKind::Error => "ERROR",
                 SyntaxKind::Root => "ROOT",
-                SyntaxKind::Italics => "ITALIC",
-                SyntaxKind::Heading => "HEADING",
-                SyntaxKind::ListItem => "LISTITEM",
-                SyntaxKind::Bold => "BOLD",
-                SyntaxKind::Strikethrough => "STRIKETHROUGH",
-                SyntaxKind::UnderLined => "UNDERLINED",
                 SyntaxKind::IndentWhiteSpace => "INDENTWHITESPACE",
-                SyntaxKind::BoldMarker => "BOLDMARKER",
-                SyntaxKind::HeadingMarker => "HEADINGMARKER",
+                SyntaxKind::LeftSqBrackets => "TODO",
+                SyntaxKind::RightSqBrackets => "TODO",
+                SyntaxKind::LeftParen => "TODO",
+                SyntaxKind::RightParen => "TODO",
+                SyntaxKind::LeftCurlyBraces => "TODO",
+                SyntaxKind::RightCurlyBraces => "TODO",
+                SyntaxKind::SemiColon => "TODO",
+                SyntaxKind::HashTag => "TODO",
+                SyntaxKind::Equal => "TODO",
+                SyntaxKind::Percentage => "TODO",
+                SyntaxKind::CodeMarker => "TODO",
+                SyntaxKind::SuperScriptMarker => "TODO",
+                SyntaxKind::SubScriptMarker => "TODO",
             }
         )
     }

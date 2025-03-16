@@ -12,6 +12,7 @@ pub struct Parser {
     pub current: usize,
     pub tokens: Vec<Token>,
     nodes: Vec<Node>,
+    errors: Vec<ErrorNode>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -139,7 +140,7 @@ impl ErrorNode {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SyntaxNode {
     kind: SyntaxKind,
-    pub text: EcoString,
+    text: EcoString,
     span: Span,
 }
 
@@ -161,6 +162,7 @@ impl Parser {
             tokens,
             nodes: Vec::new(),
             start: 0,
+            errors: Vec::new(),
         }
     }
 
@@ -207,6 +209,49 @@ impl Parser {
         std::mem::take(&mut self.nodes)
     }
 
+    fn delimeter_by(&mut self,i: Token, pat: SyntaxKind, expr: Expr) -> LeafNode {
+           if let Some(next_token) = self.peek() {
+                            if next_token.kind == SyntaxKind::Text {
+                                text.push_str(&next_token.text);
+                                self.advance();
+                                if next_token.text.ends_with(' ') {
+                                    // if the text ends with WhiteSpace its not vaild
+                                    if let Some(closing_token) = self.peek() {
+                                        if closing_token.kind == pat {
+                                            self.advance();
+                            return LeafNode::new(i.text, Span::new(i.span.start, i.span.end), Some("Trailing WhiteSpace".to_owned()), None);
+                                            
+                                        }
+                                    }
+                                }
+                                if let Some(closing_token) = self.peek() {
+                                    if closing_token.kind == pat {
+                                        self.advance();
+                                        return Repr::SyntaxNode(SyntaxNode::new(
+                                            pat,
+                                            text.clone(),
+                                            Span::new(start, closing_token.span.end),
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+
+                        Repr::ErrorNode(ErrorNode {
+                            kind: SyntaxKind::Error,
+                            text,
+                            error,
+                            hint,
+                            span: i.span,
+                        });
+        LeafNode {
+            text: "".into(),
+            span: self.tokens[self.current].span,
+            error: None,
+            hints: None,
+        }
+    }
+
     pub fn scan(&mut self) -> Repr {
         self.start = self.current;
 
@@ -217,7 +262,7 @@ impl Parser {
                 let start = i.span.start;
                 let mut parse_delimeted_expr =
                     |pat: SyntaxKind,
-                     kind: SyntaxKind,
+                     kind: Expr,
                      mut text: EcoString,
                      error: Option<String>,
                      hint: Option<String>| {
@@ -262,35 +307,7 @@ impl Parser {
                         })
                     };
                 match i.kind {
-                    SyntaxKind::Slash => parse_delimeted_expr(
-                        SyntaxKind::Slash,
-                        SyntaxKind::Italics,
-                        text,
-                        Some("Incomplete italic text".to_string()),
-                        Some("Text must be wrapped in slash pairs like /text/".to_string()),
-                    ),
-                    SyntaxKind::Underscore => parse_delimeted_expr(
-                        SyntaxKind::Underscore,
-                        SyntaxKind::UnderLined,
-                        text,
-                        Some("Incomplete underlined text".to_string()),
-                        Some("Text must be wrapped in underscore pairs like _text_".to_string()),
-                    ),
-                    SyntaxKind::Tilda => parse_delimeted_expr(
-                        SyntaxKind::Tilda,
-                        SyntaxKind::ListItem,
-                        text,
-                        Some("Incomplete list text".to_string()),
-                        Some("Text must be wrapped in tilda pairs like ~text~".to_string()),
-                    ),
-                    SyntaxKind::Hyphen => parse_delimeted_expr(
-                        SyntaxKind::Hyphen,
-                        SyntaxKind::Strikethrough,
-                        text,
-                        Some("Incomplete italic text".to_string()),
-                        Some("Text must be wrapped in tilda pairs like ~text~".to_string()),
-                    ),
-
+                    SyntaxKind::Underscore => parse_delimeted_expr(),
                     _ => Repr::SyntaxNode(SyntaxNode::new(i.kind, i.text.into(), i.span)),
                 }
             }
@@ -317,29 +334,40 @@ impl Iterator for Parser {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use crate::*;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Expr {
+    Bold(LeafNode),
+    Italics(LeafNode),
+    Error(LeafNode),
+}
 
-    use self::kind::SyntaxKind;
-    use self::span::Span;
-
-    #[test]
-    fn parse_italics() {
-        let mut italics = Vec::new();
-        let mut errors = Vec::new();
-        let source = include_str!("../examples/tests/italics.norg");
-        let lexed = lexer::Lexer::new(source.into()).lex();
-        let mut nodes = parser::Parser::new(lexed.clone());
-        nodes.parse().iter().for_each(|node| {
-            if node.kind() == SyntaxKind::Italics {
-                assert_eq!(node.span(), Span::new(52, 69));
-                italics.push(node.text());
-            } else if node.kind() == SyntaxKind::Error {
-                errors.push(node.text());
+impl Expr {
+    fn errors(&self) -> Vec<String> {
+        match self {
+            Expr::Bold(leaf_node) => vec![format!("Unclosed delimeter {}", leaf_node.span.start)],
+            Expr::Italics(leaf_node) => {
+                vec![format!("Unclosed delimeter {}", leaf_node.span.start)]
             }
-        });
-        assert_eq!(italics.len(), 1);
-        assert_eq!(errors.len(), 5);
+            Expr::Error(leaf_node) => vec![format!("Unclosed delimeter {}", leaf_node.span.start)],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LeafNode {
+    text: EcoString,
+    span: Span,
+    error: Option<String>,
+    hints: Option<String>,
+}
+
+impl LeafNode {
+    pub fn new(text: EcoString, span: Span, error: Option<String>, hints: Option<String>) -> Self {
+        Self {
+            text,
+            span,
+            error,
+            hints,
+        }
     }
 }
