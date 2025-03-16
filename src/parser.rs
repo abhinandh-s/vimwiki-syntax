@@ -1,6 +1,6 @@
 use std::fmt::Display;
-use std::ops::Deref;
 
+use anyhow::anyhow;
 use ecow::EcoString;
 
 use crate::kind::SyntaxKind;
@@ -16,32 +16,70 @@ pub struct Parser {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Expr {
+    Text(SyntaxNode),
+    Italics(SyntaxNode),
+    Error(SyntaxNode),
+    Bold(SyntaxNode),
+    UnderLined(SyntaxNode),
+    Strikethrough(SyntaxNode),
+    ListItem(SyntaxNode),
+    Indent(SyntaxNode),
+    NewLine,
+}
+impl Expr {
+    pub fn from_untyped(node: &SyntaxNode) -> Expr {
+        match node.kind {
+            SyntaxKind::Italics => Expr::Italics(node.clone()),
+            SyntaxKind::Error => Expr::Error(node.clone()),
+            SyntaxKind::Strikethrough => Expr::Strikethrough(node.clone()),
+            SyntaxKind::UnderLined => Expr::UnderLined(node.clone()),
+            SyntaxKind::Text => Expr::Text(node.clone()),
+            _ => Self::Error(node.clone()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Node(Repr);
 
 impl Node {
-    pub fn kind(&self) -> &str {
+    pub fn type_is(&self) -> &str {
         match self {
             Self(Repr::SyntaxNode(_)) => "SyntaxNode",
             Self(Repr::ErrorNode(_)) => "ErrorNode",
         }
     }
-      pub fn text(&self) -> String {
+    pub fn text(&self) -> String {
         match self {
             Self(Repr::SyntaxNode(text)) => text.text.to_string(),
             Self(Repr::ErrorNode(err)) => err.text.to_string(),
         }
     }
-  pub fn errors(&self) -> Option<String> {
+    pub fn kind(&self) -> SyntaxKind {
+        match self {
+            Self(Repr::SyntaxNode(text)) => text.kind,
+            Self(Repr::ErrorNode(err)) => err.kind,
+        }
+    }
+    // returns the span of syntax node
+    pub fn span(&self) -> Span {
+        match self {
+            Self(Repr::SyntaxNode(text)) => text.span,
+            Self(Repr::ErrorNode(err)) => err.span,
+        }
+    }
+
+    pub fn errors(&self) -> Option<String> {
         match self {
             Self(Repr::SyntaxNode(_)) => None,
             Self(Repr::ErrorNode(err)) => err.error.clone(),
         }
     }
-
 }
 
 impl Repr {
-       pub fn kind(&self) -> &str {
+    pub fn kind(&self) -> &str {
         match self {
             Self::SyntaxNode(_) => "SyntaxNode",
             Self::ErrorNode(_) => "ErrorNode",
@@ -143,11 +181,13 @@ impl Parser {
         }
     }
 
+    #[inline]
     fn is_at_end(&self) -> bool {
         self.current >= self.tokens.len()
     }
 
     // peek at the current charecter without consuming it.
+    #[inline]
     fn peek(&self) -> Option<Token> {
         if self.is_at_end() {
             None
@@ -157,6 +197,7 @@ impl Parser {
     }
 
     // eat current Token and return next Token, updating current
+    #[inline]
     fn advance(&mut self) -> Option<Token> {
         if self.is_at_end() {
             None
@@ -197,16 +238,31 @@ impl Parser {
                      mut text: EcoString,
                      error: Option<String>,
                      hint: Option<String>| {
-                        if let Some(next_token) = self.peek() {
-                            if next_token.kind == SyntaxKind::WhiteSpace {
-                                text.push_str(&next_token.text);
-                                self.advance();
-                            }
-                        }
+                        // if let Some(next_token) = self.peek() {
+                        //     if next_token.kind == SyntaxKind::WhiteSpace {
+                        //         text.push_str(&next_token.text);
+                        //         self.advance();
+                        //     }
+                        // }
                         if let Some(next_token) = self.peek() {
                             if next_token.kind == SyntaxKind::Text {
                                 text.push_str(&next_token.text);
                                 self.advance();
+                                if next_token.text.ends_with(' ') {
+                                    // println!("GOT WhiteSpace at the end => {}", next_token.text);
+                                    if let Some(closing_token) = self.peek() {
+                                        if closing_token.kind == pat {
+                                            self.advance();
+                                            return Repr::ErrorNode(ErrorNode {
+                                                kind: SyntaxKind::Error,
+                                                text,
+                                                error: Some("Trailing WhiteSpace".to_owned()),
+                                                hint,
+                                                span: i.span,
+                                            });
+                                        }
+                                    }
+                                }
 
                                 if let Some(closing_token) = self.peek() {
                                     if closing_token.kind == pat {

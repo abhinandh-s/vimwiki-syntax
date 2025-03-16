@@ -34,11 +34,13 @@ impl Lexer {
         }
     }
 
+    #[inline]
     fn is_at_end(&self) -> bool {
         self.current >= self.source.len_chars()
     }
 
     // peek at the current charecter without consuming it.
+    #[inline]
     fn peek(&self) -> Option<char> {
         if self.is_at_end() {
             None
@@ -52,6 +54,7 @@ impl Lexer {
     }
 
     // eat current char and return next char, updating current
+    #[inline]
     fn advance(&mut self) -> Option<char> {
         if self.is_at_end() {
             None
@@ -69,6 +72,7 @@ impl Lexer {
         }
     }
 
+    #[inline]
     fn make_token(&self, token_kind: SyntaxKind) -> Token {
         Token {
             kind: token_kind,
@@ -92,6 +96,7 @@ impl Lexer {
         self.tokens.clone()
     }
 
+    #[inline]
     pub fn scan(&mut self) -> Token {
         self.start = self.current;
         if self.is_at_end() {
